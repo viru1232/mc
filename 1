@@ -1,0 +1,51 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
+
+# a) Load the data and find its shape
+data = pd.read_csv('heart.csv')
+print("Shape of Data:", data.shape)
+
+# b) Find missing values
+print("\nMissing Values:\n", data.isnull().sum())
+
+# c) Data types of each column
+print("\nData Types:\n", data.dtypes)
+
+# d) Count of zeros in each column
+print("\nZero Counts:\n", (data == 0).sum())
+
+# e) Mean age of patients
+print("\nMean Age:", data['Age'].mean())
+
+# f) Extract age, sex, chest pain, rest bp, cholesterol (adjust to your dataset's exact column names)
+columns_needed = ['Age', 'Sex', 'ChestPainType', 'RestingBP', 'Cholesterol']
+subset = data[columns_needed]
+print("\nExtracted Columns:\n", subset.head())
+
+# Random train-test split (75% train, 25% test)
+train, test = train_test_split(subset, test_size=0.25, random_state=42)
+print("\nTrain Shape:", train.shape)
+print("Test Shape:", test.shape)
+
+# COVID diagnosis confusion matrix and metrics
+# Given: Predicted positive = 100, Actual positive = 50, True positive = 45, Total = 500
+TP = 45
+FP = 100 - 45
+FN = 50 - 45
+TN = 500 - (TP + FP + FN)
+
+conf_matrix = np.array([[TP, FN], [FP, TN]])
+print("\nConfusion Matrix (manual calculation):\n", conf_matrix)
+
+# Calculate metrics
+accuracy = (TP + TN) / 500
+precision = TP / (TP + FP)
+recall = TP / (TP + FN)
+f1 = 2 * (precision * recall) / (precision + recall)
+
+print("\nAccuracy:", accuracy)
+print("Precision:", precision)
+print("Recall:", recall)
+print("F1 Score:", f1)
