@@ -1,0 +1,152 @@
+# 🤖 Diabetes Prediction using Artificial Neural Network (ANN)
+# Dataset: https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv
+
+# ---------------------------------------------------------------
+# Step 1: Import Required Libraries
+# ---------------------------------------------------------------
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+# Deep Learning Libraries
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.utils import plot_model
+from ann_visualizer.visualize import ann_viz
+import warnings
+warnings.filterwarnings("ignore")
+
+# ---------------------------------------------------------------
+# Step 2: Load Dataset
+# ---------------------------------------------------------------
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv"
+column_names = [
+    'Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness',
+    'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age', 'Outcome'
+]
+data = pd.read_csv(url, header=None, names=column_names)
+
+print("✅ Dataset Loaded Successfully!\n")
+print(data.head())
+print("\nDataset Shape:", data.shape)
+
+# ---------------------------------------------------------------
+# Step 3: Data Preprocessing
+# ---------------------------------------------------------------
+# Features and Target
+X = data.iloc[:, :-1].values
+y = data.iloc[:, -1].values
+
+# Normalize the data
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+print("\nTraining Samples:", X_train.shape[0])
+print("Testing Samples:", X_test.shape[0])
+
+# ---------------------------------------------------------------
+# Step 4: Define ANN Model
+# ---------------------------------------------------------------
+def create_ann(hidden_activation='relu', output_activation='sigmoid'):
+    model = Sequential()
+    # Input layer + 1st hidden layer
+    model.add(Dense(12, input_dim=8, activation=hidden_activation))
+    # 2nd hidden layer
+    model.add(Dense(8, activation=hidden_activation))
+    # Output layer
+    model.add(Dense(1, activation=output_activation))
+    return model
+
+model = create_ann()
+
+# ---------------------------------------------------------------
+# Step 5: Compile Model
+# ---------------------------------------------------------------
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+print("\n✅ Model Compiled Successfully!")
+
+# ---------------------------------------------------------------
+# Step 6: Fit Model
+# ---------------------------------------------------------------
+history = model.fit(X_train, y_train, validation_split=0.2, epochs=100, batch_size=16, verbose=1)
+
+# ---------------------------------------------------------------
+# Step 7: Evaluate Model Performance
+# ---------------------------------------------------------------
+loss, accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"\n🎯 Model Accuracy: {accuracy:.4f}")
+
+# Predict
+y_pred = (model.predict(X_test) > 0.5).astype(int)
+
+# Confusion Matrix & Classification Report
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+# ---------------------------------------------------------------
+# Step 8: Visualize Accuracy and Loss
+# ---------------------------------------------------------------
+plt.figure(figsize=(12,5))
+plt.subplot(1,2,1)
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title("Model Accuracy")
+plt.xlabel("Epochs")
+plt.ylabel("Accuracy")
+plt.legend()
+
+plt.subplot(1,2,2)
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title("Model Loss")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.legend()
+plt.show()
+
+# ---------------------------------------------------------------
+# Step 9: Experiment with Different Epochs and Batch Sizes
+# ---------------------------------------------------------------
+epochs_list = [50, 100, 200]
+batch_sizes = [8, 16, 32]
+results = []
+
+for e in epochs_list:
+    for b in batch_sizes:
+        model_temp = create_ann()
+        model_temp.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+        model_temp.fit(X_train, y_train, epochs=e, batch_size=b, verbose=0)
+        _, acc = model_temp.evaluate(X_test, y_test, verbose=0)
+        results.append({'Epochs': e, 'Batch Size': b, 'Accuracy': acc})
+
+results_df = pd.DataFrame(results)
+print("\n📊 Performance with Different Epochs & Batch Sizes:")
+print(results_df)
+
+# ---------------------------------------------------------------
+# Step 10: Experiment with Different Activation Functions
+# ---------------------------------------------------------------
+activations = ['relu', 'tanh', 'sigmoid']
+activation_results = []
+
+for act in activations:
+    model_act = create_ann(hidden_activation=act)
+    model_act.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    model_act.fit(X_train, y_train, epochs=100, batch_size=16, verbose=0)
+    _, acc = model_act.evaluate(X_test, y_test, verbose=0)
+    activation_results.append({'Hidden Activation': act, 'Accuracy': acc})
+
+activation_df = pd.DataFrame(activation_results)
+print("\n⚙️ Performance with Different Activation Functions:")
+print(activation_df)
+
+# ---------------------------------------------------------------
+# Step 11: Visualize ANN Architecture (using ann_visualizer)
+# ---------------------------------------------------------------
+ann_viz(model, title="Pima Indians Diabetes ANN Model", view=True)
