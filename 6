@@ -1,0 +1,101 @@
+# 🛒 Market Basket Optimization using Apriori Algorithm
+# Dataset: https://www.kaggle.com/hemanthkumar05/market-basket-optimization
+
+# -------------------------------------------------------------
+# Step 1: Import Required Libraries
+# -------------------------------------------------------------
+import pandas as pd
+from mlxtend.frequent_patterns import apriori, association_rules
+from mlxtend.preprocessing import TransactionEncoder
+import matplotlib.pyplot as plt
+import seaborn as sns
+%matplotlib inline
+
+# -------------------------------------------------------------
+# Step 2: Load Dataset (No Header)
+# -------------------------------------------------------------
+# Each row represents a transaction; each column = an item
+dataset = pd.read_csv("Market_Basket_Optimisation.csv", header=None)
+print("✅ Dataset Loaded Successfully!")
+print(dataset.head())
+
+# -------------------------------------------------------------
+# Step 3: Data Preprocessing
+# -------------------------------------------------------------
+# Convert dataset into list of transactions
+transactions = []
+for i in range(0, dataset.shape[0]):
+    transaction = [str(dataset.values[i, j]) for j in range(0, dataset.shape[1]) if str(dataset.values[i, j]) != 'nan']
+    transactions.append(transaction)
+
+print(f"\nTotal Transactions: {len(transactions)}")
+print(f"Example Transaction:\n{transactions[0]}")
+
+# -------------------------------------------------------------
+# Step 4: Encode Transactions
+# -------------------------------------------------------------
+# Convert list of transactions into one-hot encoded DataFrame
+te = TransactionEncoder()
+te_ary = te.fit(transactions).transform(transactions)
+df = pd.DataFrame(te_ary, columns=te.columns_)
+print("\n✅ Data Encoded Successfully!")
+print(df.head())
+
+# -------------------------------------------------------------
+# Step 5: Train Apriori Algorithm
+# -------------------------------------------------------------
+# Generate frequent itemsets with minimum support
+frequent_itemsets = apriori(df, min_support=0.003, use_colnames=True)
+frequent_itemsets = frequent_itemsets.sort_values(by='support', ascending=False)
+print("\nFrequent Itemsets (Top 10):")
+print(frequent_itemsets.head(10))
+
+# -------------------------------------------------------------
+# Step 6: Generate Association Rules
+# -------------------------------------------------------------
+rules = association_rules(frequent_itemsets, metric="lift", min_threshold=1)
+rules = rules.sort_values(by='lift', ascending=False)
+print("\nAssociation Rules (Top 10):")
+print(rules.head(10))
+
+# -------------------------------------------------------------
+# Step 7: Visualize Top Rules
+# -------------------------------------------------------------
+plt.figure(figsize=(8,6))
+sns.scatterplot(x='support', y='confidence', size='lift', data=rules, alpha=0.7, sizes=(40, 400), hue='lift', palette='coolwarm')
+plt.title('Association Rules: Support vs Confidence')
+plt.xlabel('Support')
+plt.ylabel('Confidence')
+plt.legend(title='Lift', loc='best')
+plt.show()
+
+# -------------------------------------------------------------
+# Step 8: Hyperparameter Tuning — Increase Minimum Confidence
+# -------------------------------------------------------------
+# Try higher minimum confidence
+rules_high_conf = association_rules(frequent_itemsets, metric="confidence", min_threshold=0.5)
+rules_high_conf = rules_high_conf.sort_values(by='lift', ascending=False)
+print("\nRules with Higher Minimum Confidence (≥ 0.5):")
+print(rules_high_conf.head(10))
+
+# -------------------------------------------------------------
+# Step 9: Visualize Effect of Confidence Threshold
+# -------------------------------------------------------------
+plt.figure(figsize=(8,6))
+sns.scatterplot(x='support', y='confidence', data=rules_high_conf, hue='lift', palette='viridis', s=100)
+plt.title('Rules after Increasing Minimum Confidence (≥ 0.5)')
+plt.xlabel('Support')
+plt.ylabel('Confidence')
+plt.show()
+
+# -------------------------------------------------------------
+# Step 10: Summary of Findings
+# -------------------------------------------------------------
+print("\n📊 Summary of Findings:")
+print(f"Total Rules Found (Initial): {len(rules)}")
+print(f"Total Rules Found (High Confidence ≥ 0.5): {len(rules_high_conf)}")
+
+print("\n✅ Insights:")
+print("- Each rule shows an association: items on the left-hand side (antecedents) tend to be bought with items on the right-hand side (consequents).")
+print("- Higher 'lift' indicates stronger association between products.")
+print("- As we increase the confidence threshold, the number of rules decreases but the quality (strength) of rules improves.")
