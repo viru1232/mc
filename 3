@@ -1,0 +1,111 @@
+# 🎓 Graduate Admission Prediction using Decision Tree
+
+# -----------------------------------------------
+# Step 1: Import Libraries
+# -----------------------------------------------
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+%matplotlib inline
+
+# -----------------------------------------------
+# Step 2: Load Dataset
+# -----------------------------------------------
+# Download from Kaggle: https://www.kaggle.com/mohansacharya/graduate-admissions
+# Place the file "Admission_Predict.csv" in your working directory
+data = pd.read_csv("Admission_Predict.csv")
+print("Data Loaded Successfully!\n")
+print(data.head())
+
+# -----------------------------------------------
+# Step 3: Data Preprocessing
+# -----------------------------------------------
+# Clean column names
+data.columns = data.columns.str.strip().str.replace(' ', '_')
+
+# Convert target column (Chance_of_Admit) into binary (0 or 1)
+data['Admitted'] = (data['Chance_of_Admit'] >= 0.5).astype(int)
+
+# Drop original column
+data.drop('Chance_of_Admit', axis=1, inplace=True)
+
+# Display summary
+print("\nData Information:")
+print(data.info())
+
+# -----------------------------------------------
+# Step 4: Select Features and Target
+# Counselor uses GRE Score and GPA for prediction
+# -----------------------------------------------
+X = data[['GRE_Score', 'CGPA']]
+y = data['Admitted']
+
+# -----------------------------------------------
+# Step 5: Train-Test Split
+# -----------------------------------------------
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+print(f"\nTraining Samples: {X_train.shape[0]}")
+print(f"Testing Samples: {X_test.shape[0]}")
+
+# -----------------------------------------------
+# Step 6: Train Decision Tree Classifier
+# -----------------------------------------------
+dt_model = DecisionTreeClassifier(criterion='entropy', max_depth=4, random_state=42)
+dt_model.fit(X_train, y_train)
+print("\nDecision Tree Model Trained Successfully!")
+
+# -----------------------------------------------
+# Step 7: Make Predictions
+# -----------------------------------------------
+y_pred = dt_model.predict(X_test)
+
+# -----------------------------------------------
+# Step 8: Evaluate Model
+# -----------------------------------------------
+accuracy = accuracy_score(y_test, y_pred)
+cm = confusion_matrix(y_test, y_pred)
+cr = classification_report(y_test, y_pred)
+
+print("\n📊 Model Evaluation:")
+print(f"Accuracy: {accuracy:.3f}")
+print("\nConfusion Matrix:\n", cm)
+print("\nClassification Report:\n", cr)
+
+# -----------------------------------------------
+# Step 9: Visualize Decision Tree
+# -----------------------------------------------
+plt.figure(figsize=(12,8))
+plot_tree(dt_model, feature_names=X.columns, class_names=['Not Admitted','Admitted'], filled=True)
+plt.title("Decision Tree for Graduate Admission Prediction")
+plt.show()
+
+# -----------------------------------------------
+# Step 10: Visualize Decision Boundary (Optional)
+# -----------------------------------------------
+x_min, x_max = X['GRE_Score'].min() - 5, X['GRE_Score'].max() + 5
+y_min, y_max = X['CGPA'].min() - 0.5, X['CGPA'].max() + 0.5
+
+xx, yy = np.meshgrid(np.arange(x_min, x_max, 1),
+                     np.arange(y_min, y_max, 0.01))
+
+Z = dt_model.predict(np.c_[xx.ravel(), yy.ravel()])
+Z = Z.reshape(xx.shape)
+
+plt.figure(figsize=(10,6))
+plt.contourf(xx, yy, Z, alpha=0.3, cmap=plt.cm.coolwarm)
+plt.scatter(X['GRE_Score'], X['CGPA'], c=y, edgecolor='k', cmap=plt.cm.coolwarm)
+plt.xlabel('GRE Score')
+plt.ylabel('GPA (CGPA)')
+plt.title('Decision Tree Classification Boundary')
+plt.show()
+
+# -----------------------------------------------
+# Step 11: Feature Importance
+# -----------------------------------------------
+importances = pd.DataFrame({'Feature': X.columns, 'Importance': dt_model.feature_importances_})
+print("\nFeature Importance:")
+print(importances.sort_values(by='Importance', ascending=False))
