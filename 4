@@ -1,135 +1,127 @@
-# 📱 SMS Spam Filtering using Naive Bayes & Logistic Regression
-# Dataset: http://archive.ics.uci.edu/ml/datasets/sms+spam+collection
-
-# -----------------------------------------------------------
-# Step 1: Import Libraries
-# -----------------------------------------------------------
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
-from sklearn.preprocessing import LabelEncoder
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB, BernoulliNB
+df = pd.read_csv('SMSSpamCollection', sep='\t', names = ['label', 'text'])     df
+df.shape        !pip install nltk    import nltk  nltk.download('punkt')
+nltk.download('punkt_tab')      nltk.download('stopwords')
+
+sent = 'Hello Friends! how are you?'
+from nltk.tokenize import word_tokenize
+     word_tokenize(sent)
+
+from nltk.corpus import stopwords
+   swords = stopwords.words('english')      swords 
+
+   clean = [word for word in word_tokenize(sent) if word not in swords]          clean
+
+from nltk.stem import PorterStemmer
+ps = PorterStemmer()
+clean = [ps.stem(word) for word in word_tokenize(sent)
+         if word not in swords]            clean
+
+
+sent = 'Hello Friends! how are you? we will be learning python todays.'
+def clean_text(sent):
+    tokens = word_tokenize(sent)
+    clean = [word for word in tokens
+             if word.isdigit() or word.isalpha()]
+    clean = [ps.stem(word) for word in word_tokenize(sent)
+         if word not in swords]
+    print(clean)
+
+
+    
+clean_text(sent)
+#preprocessing
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+tfidf = TfidfVectorizer(analyzer=clean_text)
+
+x = df['text']
+y =df['label']
+
+# If x is a pandas Series
+x = x.fillna('')  # replace None/NaN with empty string
+x = x.astype(str)  # convert all elements to strings
+
+
+
+import re
+
+def clean_text(text):
+    # Convert None or non-string to empty string
+    if not isinstance(text, str):
+        text = ""
+
+    # Lowercase
+    text = text.lower()
+
+    # Remove non-alphabetic characters
+    text = re.sub(r'[^a-z\s]', '', text)
+
+    # Tokenize by splitting on whitespace
+    tokens = text.split()
+
+    return tokens  # ALWAYS return a list
+
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+# Ensure all elements are strings
+x = [str(i) if i is not None else "" for i in x]
+
+tfidf = TfidfVectorizer(analyzer=clean_text)
+x_new = tfidf.fit_transform(x)
+
+print(x_new.shape)                x_new    y.value_counts()
+
+
+#cross
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split
+
+x_train, x_test, y_train, y_test = train_test_split(x_new, y, random_state=0, test_size=0.25)
+x_train.shape   x_test.shape
+
+from sklearn.naive_bayes import GaussianNB        nb = GaussianNB()
+nb.fit(x_train.toarray(), y_train)
+
+y_pred = nb.predict(x_test.toarray())           y_test.value_counts()
+
+
+
+from sklearn.metrics import ConfusionMatrixDisplay
+ConfusionMatrixDisplay .from_predictions(y_test, y_pred)
+
+from sklearn.metrics import accuracy_score, classification_report
+print(classification_report(y_test, y_pred))
+accuracy_score(y_test, y_pred)
+from sklearn.ensemble import RandomForestClassifier
+rf = RandomForestClassifier(random_state=0)
+
+rf.fit(x_train, y_train)
+y_pred = rf.predict(x_test)
+ConfusionMatrixDisplay.from_predictions(y_test, y_pred)
+print(classification_report(y_test, y_pred))
+accuracy_score(y_test, y_pred)
+
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
-import warnings
-warnings.filterwarnings("ignore")
-%matplotlib inline
+log = LogisticRegression()
+log.fit(x_train, y_train)
+y_pred = log.predict(x_test)
+accuracy_score(y_test, y_pred)
 
-# -----------------------------------------------------------
-# Step 2: Load Dataset
-# -----------------------------------------------------------
-# The dataset is a single text file, each line formatted as:  "label<TAB>message"
-# Example: "ham\tGo until jurong point, crazy.. Available only in bugis n great world la e buffet..."
-data = pd.read_csv("SMSSpamCollection", sep='\t', header=None, names=['label', 'message'])
-print("Dataset Loaded Successfully!")
-print(data.head())
+#hyper tuning
 
-# -----------------------------------------------------------
-# Step 3: Data Preprocessing
-# -----------------------------------------------------------
-# Encode labels: ham=0, spam=1
-le = LabelEncoder()
-data['label_num'] = le.fit_transform(data['label'])
+from sklearn.model_selection import GridSearchCV
+params= {
+    'criterion': ['gini', 'entropy'],
+    'max_features': ['sqrt', 'log2'],
+    'random_state': [0,1,2,3,4],
+    'class_weight':['balanced', 'balanced_subsample']
+}
 
-# Display dataset info
-print("\nData Information:")
-print(data.info())
-print("\nLabel Distribution:\n", data['label'].value_counts())
+grid = GridSearchCV(rf, param_grid=params, cv=5, scoring='accuracy')
+grid.fit(x_train, y_train)
 
-# Basic text cleaning (optional)
-data['message'] = data['message'].str.lower()
 
-# -----------------------------------------------------------
-# Step 4: Feature Extraction (Text to Numeric)
-# -----------------------------------------------------------
-# Convert text messages into TF-IDF features
-tfidf = TfidfVectorizer(stop_words='english', max_features=3000)
-X = tfidf.fit_transform(data['message'])
-y = data['label_num']
 
-print("\nFeature Matrix Shape:", X.shape)
 
-# -----------------------------------------------------------
-# Step 5: Train-Test Split
-# -----------------------------------------------------------
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-print("\nTraining Samples:", X_train.shape[0])
-print("Testing Samples:", X_test.shape[0])
-
-# -----------------------------------------------------------
-# Step 6: Apply Machine Learning Algorithms
-# -----------------------------------------------------------
-# --- Model 1: Multinomial Naive Bayes ---
-mnb = MultinomialNB()
-mnb.fit(X_train, y_train)
-y_pred_mnb = mnb.predict(X_test)
-
-# --- Model 2: Logistic Regression ---
-lr = LogisticRegression(max_iter=500)
-lr.fit(X_train, y_train)
-y_pred_lr = lr.predict(X_test)
-
-# -----------------------------------------------------------
-# Step 7: Evaluate Models
-# -----------------------------------------------------------
-def evaluate_model(name, y_true, y_pred):
-    print(f"\n📊 Model: {name}")
-    print("Accuracy:", accuracy_score(y_true, y_pred))
-    print("Confusion Matrix:\n", confusion_matrix(y_true, y_pred))
-    print("Classification Report:\n", classification_report(y_true, y_pred))
-
-evaluate_model("Multinomial Naive Bayes", y_test, y_pred_mnb)
-evaluate_model("Logistic Regression", y_test, y_pred_lr)
-
-# -----------------------------------------------------------
-# Step 8: Cross-Validation
-# -----------------------------------------------------------
-cv_scores_mnb = cross_val_score(mnb, X, y, cv=5, scoring='accuracy')
-cv_scores_lr = cross_val_score(lr, X, y, cv=5, scoring='accuracy')
-
-print("\n📈 Cross-Validation Results:")
-print(f"Naive Bayes Mean Accuracy: {cv_scores_mnb.mean():.4f}")
-print(f"Logistic Regression Mean Accuracy: {cv_scores_lr.mean():.4f}")
-
-# -----------------------------------------------------------
-# Step 9: Hyperparameter Tuning
-# -----------------------------------------------------------
-# Naive Bayes (alpha tuning)
-param_grid_nb = {'alpha': [0.1, 0.5, 1.0, 1.5, 2.0]}
-grid_nb = GridSearchCV(MultinomialNB(), param_grid_nb, cv=5, scoring='accuracy')
-grid_nb.fit(X_train, y_train)
-
-print("\nBest Parameters for Naive Bayes:", grid_nb.best_params_)
-print("Best CV Accuracy:", grid_nb.best_score_)
-
-# Logistic Regression (C tuning)
-param_grid_lr = {'C': [0.1, 0.5, 1, 5, 10]}
-grid_lr = GridSearchCV(LogisticRegression(max_iter=500), param_grid_lr, cv=5, scoring='accuracy')
-grid_lr.fit(X_train, y_train)
-
-print("\nBest Parameters for Logistic Regression:", grid_lr.best_params_)
-print("Best CV Accuracy:", grid_lr.best_score_)
-
-# -----------------------------------------------------------
-# Step 10: Final Model Comparison
-# -----------------------------------------------------------
-models = pd.DataFrame({
-    'Model': ['Multinomial Naive Bayes', 'Logistic Regression'],
-    'Test Accuracy': [accuracy_score(y_test, y_pred_mnb), accuracy_score(y_test, y_pred_lr)],
-    'CrossVal Accuracy': [cv_scores_mnb.mean(), cv_scores_lr.mean()]
-})
-
-print("\n📊 Model Comparison Summary:")
-print(models)
-
-# -----------------------------------------------------------
-# Step 11: Visualization
-# -----------------------------------------------------------
-plt.figure(figsize=(7,5))
-sns.barplot(x='Model', y='Test Accuracy', data=models, palette='coolwarm')
-plt.title("Model Accuracy Comparison")
-plt.ylim(0.9, 1.0)
-plt.show()
