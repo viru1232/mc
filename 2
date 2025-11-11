@@ -13,13 +13,15 @@ print(data.head())
 
 
 # Assuming Month column is categorical (1–12)
-X = data[['Month']]  # independent variable
-y = data['Temperature']  # dependent variable
+X = data[['JAN']]  # independent variable
+y = data['ANNUAL']  # dependent variable
 
 
 # Create and train model
 model = LinearRegression()
 model.fit(X, y)
+model.coef_
+model.predcit([[2012]])
 
 # Predict month-wise temperatures
 y_pred = model.predict(X)
