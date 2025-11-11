@@ -1,0 +1,73 @@
+# ---------------------------------------------------------
+# LINEAR REGRESSION ON MONTH-WISE TEMPERATURE DATA (INDIA)
+# ---------------------------------------------------------
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
+# -------------------------------
+# Step 1: Load the dataset
+# -------------------------------
+data = pd.read_csv('temperatures.csv')
+print("Dataset Loaded Successfully!\n")
+print(data.head())
+
+# -------------------------------
+# Step 2: Define months
+# -------------------------------
+months = ['January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December']
+
+results = []
+
+# -------------------------------
+# Step 3: Fit and evaluate models for each month
+# -------------------------------
+for month in months:
+    X = data[['Year']]
+    y = data[month]
+    
+    # Train model
+    model = LinearRegression()
+    model.fit(X, y)
+    y_pred = model.predict(X)
+    
+    # Evaluation metrics
+    mse = mean_squared_error(y, y_pred)
+    mae = mean_absolute_error(y, y_pred)
+    r2 = r2_score(y, y_pred)
+    
+    results.append([month, mse, mae, r2])
+    
+# Store all metrics in a DataFrame
+metrics_df = pd.DataFrame(results, columns=['Month', 'MSE', 'MAE', 'R²'])
+print("\nModel Performance (Month-wise):")
+print(metrics_df)
+
+# -------------------------------
+# Step 4: Visualize regression for one month (e.g., January)
+# -------------------------------
+selected_month = 'January'
+X = data[['Year']]
+y = data[selected_month]
+model = LinearRegression().fit(X, y)
+y_pred = model.predict(X)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(X, y, color='blue', label='Actual Temperatures')
+plt.plot(X, y_pred, color='red', linewidth=2, label='Regression Line')
+
+# Future predictions (2026–2030)
+future_years = np.array(range(data['Year'].max()+1, data['Year'].max()+6)).reshape(-1, 1)
+future_preds = model.predict(future_years)
+plt.scatter(future_years, future_preds, color='green', marker='x', s=100, label='Predicted (Future)')
+
+plt.title(f'Linear Regression for {selected_month} Temperatures')
+plt.xlabel('Year')
+plt.ylabel('Temperature (°C)')
+plt.legend()
+plt.grid(True)
+plt.show()
