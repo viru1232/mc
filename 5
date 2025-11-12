@@ -1,155 +1,97 @@
-# 🛍️ Mall Customer Segmentation using Clustering
-# Dataset: https://www.kaggle.com/shwetabh123/mall-customers
-
-# -------------------------------------------------------
-# Step 1: Import Required Libraries
-# -------------------------------------------------------
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.cluster import KMeans, AgglomerativeClustering
-from sklearn.model_selection import train_test_split, cross_val_score, KFold
-from sklearn.metrics import silhouette_score
-import scipy.cluster.hierarchy as sch
-%matplotlib inline
 
-# -------------------------------------------------------
-# Step 2: Load Dataset
-# -------------------------------------------------------
-data = pd.read_csv("Mall_Customers.csv")
-print("✅ Dataset Loaded Successfully!")
-print(data.head())
+df =  pd.read_csv('Mall_Customers.csv')           df.head()
+x = df.iloc[:, 3:]            x
 
-# -------------------------------------------------------
-# Step 3: Data Preprocessing
-# -------------------------------------------------------
-print("\nDataset Information:")
-print(data.info())
+plt.title('unclustered data')
+plt.xlabel('annual income')
+plt.ylabel('spending score')
+plt.scatter(x['Annual Income (k$)'], x['Spending Score (1-100)'])
 
-# Encode Gender (if needed)
-le = LabelEncoder()
-data['Gender'] = le.fit_transform(data['Gender'])  # Male=1, Female=0
+from sklearn.cluster import KMeans, AgglomerativeClustering     
+km = KMeans(n_clusters=3)
+km.fit_predict(x)
+x.shape
+#sse
+km.inertia_
 
-# Check for null values
-print("\nNull Values:\n", data.isnull().sum())
+sse = []
+for k in range(1, 16):
+    km = KMeans(n_clusters=k)
+    km.fit_predict(x)
+    sse.append(km.inertia_)               sse
 
-# -------------------------------------------------------
-# Step 4: Feature Selection
-# -------------------------------------------------------
-# We'll use Annual Income and Spending Score for clustering
-X = data[['Annual Income (k$)', 'Spending Score (1-100)']]
+plt.title('Elbow Method')
+plt.xlabel('Value of K')
+plt.ylabel('sse')
+plt.xticks(range(1, 16))
+plt.plot(range(1, 16), sse, marker='.', color='red')
 
-# Optional: scale data (good practice for distance-based algorithms)
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
+from sklearn.metrics import silhouette_score 
+silh = []
+for k in range(2, 16):
+    km = KMeans(n_clusters=k)
+    labels = km.fit_predict(x)
+    score = silhouette_score(x, labels)
+    silh.append(score)               silh
 
-# -------------------------------------------------------
-# Step 5: Train-Test Split (though clustering is unsupervised)
-# -------------------------------------------------------
-# Splitting just for demonstration as per assignment instruction
-X_train, X_test = train_test_split(X_scaled, test_size=0.2, random_state=42)
-print("\nTraining Samples:", X_train.shape[0])
-print("Testing Samples:", X_test.shape[0])
 
-# -------------------------------------------------------
-# Step 6: Apply Clustering Algorithms
-# -------------------------------------------------------
-# ---- KMeans Clustering ----
-inertia = []
-silhouette_scores = []
-for i in range(2, 11):
-    kmeans = KMeans(n_clusters=i, random_state=42)
-    kmeans.fit(X_train)
-    inertia.append(kmeans.inertia_)
-    silhouette_scores.append(silhouette_score(X_train, kmeans.labels_))
+plt.title('Silhoutte Method')
+plt.xlabel('Value of K')
+plt.ylabel('Silhoutte score')
+plt.xticks(range(2, 16))
+plt.bar(range(2, 16), silh, color='red')
 
-# Elbow Method Visualization
-plt.figure(figsize=(8,4))
-plt.plot(range(2,11), inertia, marker='o')
-plt.title("Elbow Method for Optimal k")
-plt.xlabel("Number of Clusters")
-plt.ylabel("Inertia")
-plt.show()
+km = KMeans(n_clusters=5, random_state=0)
+labels = km.fit_predict(x)
+labels                       km.cluster_centers_
 
-# Silhouette Score Visualization
-plt.figure(figsize=(8,4))
-plt.plot(range(2,11), silhouette_scores, marker='o', color='green')
-plt.title("Silhouette Scores for Different k")
-plt.xlabel("Number of Clusters")
-plt.ylabel("Silhouette Score")
-plt.show()
+cent = km.cluster_centers_
 
-# Optimal k (based on elbow/silhouette)
-k_optimal = 5
-kmeans = KMeans(n_clusters=k_optimal, random_state=42)
-kmeans.fit(X_scaled)
-y_kmeans = kmeans.labels_
+plt.title('unclustered data')
+plt.xlabel('annual income')
+plt.ylabel('spending score')
+plt.scatter(x['Annual Income (k$)'], x['Spending Score (1-100)'])
+plt.figure(figsize=(16, 9))
+plt.subplot(1, 2, 1)
 
-# ---- Hierarchical Clustering ----
-hc = AgglomerativeClustering(n_clusters=5, affinity='euclidean', linkage='ward')
-y_hc = hc.fit_predict(X_scaled)
+plt.title('Clustered data')
+plt.xlabel('annual income')
+plt.ylabel('spending score')
+plt.scatter(x['Annual Income (k$)'], x['Spending Score (1-100)'], c = labels)
+plt.subplot(1, 2, 2)
 
-# -------------------------------------------------------
-# Step 7: Evaluate Clustering Models
-# -------------------------------------------------------
-# Evaluate using silhouette score (higher = better)
-silhouette_kmeans = silhouette_score(X_scaled, y_kmeans)
-silhouette_hc = silhouette_score(X_scaled, y_hc)
+plt.scatter(cent[:, 0], cent[:, 1], s = 100, color = 'k')
+km.inertia_        km.labels_
 
-print("\n📊 Model Evaluation:")
-print(f"KMeans Silhouette Score: {silhouette_kmeans:.4f}")
-print(f"Hierarchical Clustering Silhouette Score: {silhouette_hc:.4f}")
+df[labels == 4]
+four = df[labels == 4]
+four.to_csv('mydata.csv')
+km.predict([[26, 68]])
 
-# -------------------------------------------------------
-# Step 8: Visualize Clusters (KMeans)
-# -------------------------------------------------------
-plt.figure(figsize=(8,5))
-plt.scatter(X_scaled[y_kmeans == 0, 0], X_scaled[y_kmeans == 0, 1], s=50, label='Cluster 1')
-plt.scatter(X_scaled[y_kmeans == 1, 0], X_scaled[y_kmeans == 1, 1], s=50, label='Cluster 2')
-plt.scatter(X_scaled[y_kmeans == 2, 0], X_scaled[y_kmeans == 2, 1], s=50, label='Cluster 3')
-plt.scatter(X_scaled[y_kmeans == 3, 0], X_scaled[y_kmeans == 3, 1], s=50, label='Cluster 4')
-plt.scatter(X_scaled[y_kmeans == 4, 0], X_scaled[y_kmeans == 4, 1], s=50, label='Cluster 5')
-plt.scatter(kmeans.cluster_centers_[:,0], kmeans.cluster_centers_[:,1], s=200, c='black', marker='X', label='Centroids')
-plt.title("Customer Segments (KMeans)")
-plt.xlabel("Annual Income (Scaled)")
-plt.ylabel("Spending Score (Scaled)")
-plt.legend()
-plt.show()
+agl = AgglomerativeClustering(n_clusters=5)
+alabels = agl.fit_predict(x)
+alabels
 
-# -------------------------------------------------------
-# Step 9: Visualize Hierarchical Clustering Dendrogram
-# -------------------------------------------------------
-plt.figure(figsize=(10,6))
-dendrogram = sch.dendrogram(sch.linkage(X_scaled, method='ward'))
-plt.title("Dendrogram for Hierarchical Clustering")
-plt.xlabel("Customers")
-plt.ylabel("Euclidean Distance")
-plt.show()
 
-# -------------------------------------------------------
-# Step 10: Cross-Validation (using Silhouette Scores)
-# -------------------------------------------------------
-# Cross-validation is less common in clustering but can be simulated
-kf = KFold(n_splits=5, shuffle=True, random_state=42)
-sil_scores = []
+plt.figure(figsize=(16, 9))
+plt.subplot(1, 2, 1)
+plt.title('Agglomerative Clustering')
+plt.xlabel('annual income')
+plt.ylabel('spending score')
+plt.scatter(x['Annual Income (k$)'], x['Spending Score (1-100)'], c = alabels)
+plt.figure(figsize=(16, 9))
 
-for train_idx, test_idx in kf.split(X_scaled):
-    km = KMeans(n_clusters=k_optimal, random_state=42)
-    km.fit(X_scaled[train_idx])
-    sil = silhouette_score(X_scaled[test_idx], km.predict(X_scaled[test_idx]))
-    sil_scores.append(sil)
 
-print("\n📈 Cross-Validation Silhouette Scores (KMeans):", sil_scores)
-print("Mean CV Silhouette Score:", np.mean(sil_scores))
+plt.subplot(1, 2, 2)
+plt.title('KMeans Clustering')
+plt.xlabel('annual income')
+plt.ylabel('spending score')
+plt.scatter(x['Annual Income (k$)'], x['Spending Score (1-100)'], c = labels)
+plt.scatter(cent[:, 0], cent[:, 1], s = 100, color = 'k')
 
-# -------------------------------------------------------
-# Step 11: Cluster Insights
-# -------------------------------------------------------
-# Add cluster labels to the original data
-data['Cluster'] = y_kmeans
-cluster_summary = data.groupby('Cluster')[['Annual Income (k$)', 'Spending Score (1-100)']].mean()
 
-print("\n🧾 Cluster Summary:")
-print(cluster_summary)
+
+
+   
